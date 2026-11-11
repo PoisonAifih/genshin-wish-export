@@ -81,6 +81,13 @@
         <p v-if="showCredentialFields" class="text-gray-400 text-xs m-1.5 leading-normal">{{ text.googleTokenHint }}</p>
         <p class="text-gray-400 text-xs m-1.5 leading-normal">{{ text.googleSpreadsheetHint }} {{ text.googleBannerHint }}</p>
       </el-form-item>
+      <el-form-item :label="text.historyLabel">
+        <div class="flex space-x-2 items-center">
+          <el-button :loading="history.loading === 'workbook'" :disabled="!workbook.path || !!history.loading" class="focus:outline-none" plain type="primary" @click="importHistory('workbook')">{{ text.historyFromWorkbook }}</el-button>
+          <el-button :loading="history.loading === 'sheets'" :disabled="!google.connected || !google.spreadsheetId || !!history.loading" class="focus:outline-none" plain type="primary" @click="importHistory('sheets')">{{ text.historyFromSheets }}</el-button>
+        </div>
+        <p class="text-gray-400 text-xs m-1.5 leading-normal">{{ text.historyHint }}</p>
+      </el-form-item>
       <el-form-item :label="text.autoUpdate">
         <el-switch
           @change="saveSetting"
@@ -255,6 +262,26 @@ const appendWorkbook = async () => {
     ElMessage({ message: cleanMessage(e), type: 'error', duration: 10000 })
   } finally {
     workbook.loading = false
+  }
+}
+
+const history = reactive({ loading: '' })
+
+const importHistory = async (source) => {
+  history.loading = source
+  try {
+    const result = await ipcRenderer.invoke('HISTORY_IMPORT', source)
+    ElMessage({
+      message: result.added
+        ? text.value.historySuccess.replace('${count}', result.added)
+        : text.value.historyNothingNew,
+      type: 'success'
+    })
+    if (result.added) emit('dataUpdated')
+  } catch (e) {
+    ElMessage({ message: cleanMessage(e), type: 'error', duration: 10000 })
+  } finally {
+    history.loading = ''
   }
 }
 

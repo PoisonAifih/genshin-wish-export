@@ -35,7 +35,12 @@
       </div>
     </div>
     <p class="text-gray-400 my-2 text-xs">{{hint}}<el-button @click="(state.showCacheCleanDlg=true)" v-if="state.authkeyTimeout" style="margin-left: 8px;" size="small" plain round>{{ui.button.solution}}</el-button></p>
-    <div v-if="detail" class="gap-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4">
+    <el-radio-group v-if="detail" v-model="state.view" size="small" class="mb-3">
+      <el-radio-button label="summary">{{ui.inventory.summaryTab}}</el-radio-button>
+      <el-radio-button label="inventory">{{ui.inventory.tab}}</el-radio-button>
+    </el-radio-group>
+    <inventory v-if="detail && state.view === 'inventory'" :result="gachaData.result" :i18n="state.i18n"></inventory>
+    <div v-if="detail && state.view === 'summary'" class="gap-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4">
       <div class="mb-4" v-for="(item, i) of detail" :key="i">
         <div :class="{hidden: state.config.hideNovice && item[0] === '100'}">
           <p class="text-center text-gray-600 my-2">{{typeMap.get(item[0])}}</p>
@@ -77,6 +82,7 @@ import { reactive, computed, watch, onMounted } from 'vue'
 import PieChart from './components/PieChart.vue'
 import GachaDetail from './components/GachaDetail.vue'
 import Setting from './components/Setting.vue'
+import Inventory from './components/Inventory.vue'
 import gachaDetail from './gachaDetail'
 import { version } from '../../package.json'
 import gachaType from '../gachaType.json'
@@ -96,7 +102,8 @@ const state = reactive({
   authkeyTimeout: false,
   config: {},
   sheetsLoading: false,
-  excelLoading: false
+  excelLoading: false,
+  view: 'summary'
 })
 
 const ui = computed(() => {

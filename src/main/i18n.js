@@ -66,7 +66,7 @@ const parseText = (text, data) => {
 }
 
 const mainProps = [
-  'symbol', 'ui', 'log', 'excel', 'googleSheets', 'workbook'
+  'symbol', 'ui', 'log', 'excel', 'googleSheets', 'workbook', 'historyImport'
 ]
 
 const i18n = new Proxy(raw, {

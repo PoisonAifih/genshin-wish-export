@@ -132,6 +132,25 @@
     "excel.header.pity": "dengan pity",
     "excel.customFont": "Arial",
     "excel.filePrefix": "GenshinImpact_catatan_permohonan",
-    "excel.fileType": "Excel file"
+    "excel.fileType": "Excel file",
+    "ui.setting.historyLabel": "Wish lama",
+    "ui.setting.historyFromWorkbook": "Impor dari workbook",
+    "ui.setting.historyFromSheets": "Impor dari Google Sheets",
+    "ui.setting.historyHint": "Memuat wish dari tracker kamu yang lebih lama dari yang masih ditampilkan game, agar ringkasan dan inventaris mencakup seluruh riwayat. Baris tanpa waktu ditambahkan tanpa tanggal. Data lokal dicadangkan dulu, dan impor ulang menggantikan baris yang sebelumnya diimpor, jadi perbaikan di tracker ikut terbawa.",
+    "ui.setting.historySuccess": "Berhasil mengimpor ${count} wish lama",
+    "ui.setting.historyNothingNew": "Tidak ada wish lama untuk diimpor",
+    "historyImport.noData": "Belum ada data wish. Perbarui dulu agar impor bisa dicocokkan dengan riwayat kamu.",
+    "historyImport.noTabs": "Tidak ada tab yang dikenali (Event wish, Weapon, Permanent)",
+    "historyImport.noMatch": "Tidak dapat menemukan awal riwayat game di tab \"${sheet}\" (mencari ${items}...). Pastikan tracker sudah terbaru dan milik akun ini.",
+    "googleSheets.noSpreadsheet": "Masukkan ID spreadsheet terlebih dahulu",
+    "ui.inventory.tab": "Inventaris",
+    "ui.inventory.summaryTab": "Ringkasan",
+    "ui.inventory.char5": "Karakter 5★",
+    "ui.inventory.weapon5": "Senjata 5★",
+    "ui.inventory.char4": "Karakter 4★",
+    "ui.inventory.weapon4": "Senjata 4★",
+    "ui.inventory.weapon3": "Senjata 3★",
+    "ui.inventory.pulls": "salinan",
+    "ui.inventory.unknownDate": "tanggal tidak diketahui",
+    "ui.inventory.note": "Semua yang didapat dari wish. Konstelasi (C) dan refinement (R) dihitung dari wish saja; karakter dari event atau toko tidak termasuk. Arahkan kursor ke item untuk melihat tanggal didapat."
 }
-
