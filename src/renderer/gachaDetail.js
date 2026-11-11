@@ -25,10 +25,10 @@ const gachaDetail = (data) => {
     value.forEach((item, index) => {
       const [time, name, type, rank, wishType] = item
       const timestamp = new Date(time).getTime()
-      if (!dateMin) dateMin = timestamp
-      if (!dateMax) dateMax = timestamp
-      if (dateMin > timestamp) dateMin = timestamp
-      if (dateMax < timestamp) dateMax = timestamp
+      if (timestamp) {
+        if (!dateMin || dateMin > timestamp) dateMin = timestamp
+        if (!dateMax || dateMax < timestamp) dateMax = timestamp
+      }
       if (rank === 3) {
         detail.count3++
         detail.countMio++

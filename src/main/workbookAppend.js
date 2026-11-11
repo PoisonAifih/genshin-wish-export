@@ -178,4 +178,20 @@ ipcMain.handle('WORKBOOK_SHOW_BACKUPS', async () => {
   await shell.openPath(BACKUP_DIR)
 })
 
+const readWorkbookTabs = async () => {
+  const filePath = config.workbookPath
+  if (!filePath) throw new Error(text().noFile)
+  if (!fs.existsSync(filePath)) throw new Error(i18n.parse(text().missingFile, { path: filePath }))
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.load(await fs.readFile(filePath))
+  const sheets = new Map(workbook.worksheets.map(ws => [normalizeTitle(ws.name), ws]))
+  return SHEET_LAYOUTS
+    .filter(layout => sheets.has(normalizeTitle(layout.title)))
+    .map(layout => {
+      const ws = sheets.get(normalizeTitle(layout.title))
+      return { layout, title: ws.name, rows: readRows(ws, layout.width) }
+    })
+}
+
 exports.appendToWorkbook = start
+exports.readWorkbookTabs = readWorkbookTabs

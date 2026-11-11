@@ -6,6 +6,7 @@ require('./excel')
 require('./UIGFJson')
 require('./googleSheets')
 require('./workbookAppend')
+require('./historyImport')
 // require('./gists')
 const { getUpdateInfo } = require('./update/index')
 

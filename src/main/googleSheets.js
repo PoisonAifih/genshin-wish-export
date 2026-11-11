@@ -354,4 +354,22 @@ ipcMain.handle('GOOGLE_SHEETS_EXPORT', async () => {
   return await start()
 })
 
+const readGoogleSheetTabs = async () => {
+  const spreadsheetId = config.googleSpreadsheetId
+  if (!spreadsheetId) throw new Error(text().noSpreadsheet)
+  const meta = await sheetsRequest(`/${spreadsheetId}?fields=sheets.properties.title`)
+  const titles = new Map(meta.sheets.map(item => [normalizeTitle(item.properties.title), item.properties.title]))
+  const tabs = []
+  for (const layout of SHEET_LAYOUTS) {
+    const title = titles.get(normalizeTitle(layout.title))
+    if (!title) continue
+    sendMsg(i18n.parse(text().reading, { sheet: title }))
+    const range = `${quoteTitle(title)}!A1:${columnLetter(layout.width)}`
+    const values = (await sheetsRequest(`/${spreadsheetId}/values/${encodeURIComponent(range)}`)).values || []
+    tabs.push({ layout, title, rows: values.slice(1) })
+  }
+  return tabs
+}
+
 exports.exportToGoogleSheets = start
+exports.readGoogleSheetTabs = readGoogleSheetTabs
