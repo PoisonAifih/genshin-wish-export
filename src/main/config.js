@@ -1,9 +1,9 @@
-const { readJSON, saveJSON, decipherAes, cipherAes, detectLocale } = require('./utils')
+const { readJSON, saveJSON, decipherAes, cipherAes } = require('./utils')
 
 const config = {
   urls: [],
   logType: 0,
-  lang: detectLocale(),
+  lang: 'en-us',
   current: 0,
   proxyPort: 8325,
   proxyMode: false,
@@ -12,7 +12,13 @@ const config = {
   hideNovice: true,
   gistsToken: '',
   gistsId: '',
-  readableJSON: false
+  readableJSON: false,
+  googleClientId: '',
+  googleClientSecret: '',
+  googleRefreshToken: '',
+  googleSpreadsheetId: '',
+  googleBannerName: '',
+  workbookPath: ''
 }
 
 const getLocalConfig = async () => {

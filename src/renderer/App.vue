@@ -3,7 +3,8 @@
     <div class="flex justify-between">
       <div>
         <el-button type="primary" :icon="state.status === 'init' ? 'milk-tea': 'refresh-right'" class="focus:outline-none" :disabled="!allowClick()" plain @click="fetchData()" :loading="state.status === 'loading'">{{state.status === 'init' ? ui.button.load: ui.button.update}}</el-button>
-        <el-button icon="folder-opened" @click="saveExcel" class="focus:outline-none" :disabled="!gachaData"  type="success" plain>{{ui.button.excel}}</el-button>
+        <el-button icon="folder-opened" @click="saveExcel" class="focus:outline-none" :disabled="!gachaData" :loading="state.excelLoading" type="success" plain>{{ui.button.excel}}</el-button>
+        <el-button icon="upload" @click="exportSheets" class="focus:outline-none" :disabled="!gachaData" :loading="state.sheetsLoading" type="success" plain>{{ui.button.sheets}}</el-button>
         <el-tooltip v-if="detail && state.status !== 'loading'" :content="ui.hint.newAccount" placement="bottom">
           <el-button @click="newUser()" plain icon="plus"  class="focus:outline-none"></el-button>
         </el-tooltip>
@@ -93,7 +94,9 @@ const state = reactive({
   showCacheCleanDlg: false,
   urlInput: '',
   authkeyTimeout: false,
-  config: {}
+  config: {},
+  sheetsLoading: false,
+  excelLoading: false
 })
 
 const ui = computed(() => {
@@ -190,8 +193,47 @@ const getI18nData = async () => {
   }
 }
 
+const cleanMessage = (e) => (e && e.message ? e.message : String(e))
+  .replace(/^Error invoking remote method '[^']+':\s*(Error:\s*)?/, '')
+
 const saveExcel = async () => {
-  await ipcRenderer.invoke('SAVE_EXCEL')
+  const text = state.i18n.ui.setting
+  let { path } = await ipcRenderer.invoke('WORKBOOK_STATUS')
+  if (!path) {
+    path = await ipcRenderer.invoke('WORKBOOK_PICK')
+    if (!path) return
+  }
+  state.excelLoading = true
+  try {
+    const result = await ipcRenderer.invoke('WORKBOOK_APPEND')
+    ElMessage.success(result.added ? text.workbookSuccess.replace('${count}', result.added) : text.workbookNothingNew)
+    const skipped = result.summary.filter(item => item.skipped).map(item => item.title)
+    if (skipped.length) {
+      ElMessage({ message: text.workbookSkipped.replace('${sheets}', skipped.join(', ')), type: 'warning', duration: 8000 })
+    }
+  } catch (e) {
+    ElMessage({ message: cleanMessage(e), type: 'error', duration: 10000 })
+  } finally {
+    state.excelLoading = false
+  }
+}
+
+const exportSheets = async () => {
+  const text = state.i18n.ui.setting
+  state.sheetsLoading = true
+  try {
+    const result = await ipcRenderer.invoke('GOOGLE_SHEETS_EXPORT')
+    const added = result.summary.reduce((sum, item) => sum + item.added, 0)
+    ElMessage.success(added ? text.googleExportSuccess.replace('${count}', added) : text.googleNothingNew)
+    const skipped = result.summary.filter(item => item.skipped).map(item => item.title)
+    if (skipped.length) {
+      ElMessage({ message: text.googleSkipped.replace('${sheets}', skipped.join(', ')), type: 'warning', duration: 8000 })
+    }
+  } catch (e) {
+    ElMessage({ message: cleanMessage(e), type: 'error', duration: 10000 })
+  } finally {
+    state.sheetsLoading = false
+  }
 }
 
 const openCacheFolder = async () => {
