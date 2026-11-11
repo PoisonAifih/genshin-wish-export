@@ -40,6 +40,47 @@
              @click="openLink(`https://uigf.org/${settingForm.lang.startsWith('zh-') ? 'zh/': 'en/'}`)">{{ text.UIGFLink }}</a>
         </p>
       </el-form-item>
+      <el-form-item :label="text.workbookLabel">
+        <div class="flex space-x-2 items-center w-full">
+          <el-input class="w-80" :model-value="workbook.path" readonly :placeholder="text.workbookPlaceholder"></el-input>
+          <el-button class="focus:outline-none" plain @click="pickWorkbook">{{ text.workbookPick }}</el-button>
+          <el-button :loading="workbook.loading" :disabled="!workbook.path" class="focus:outline-none" plain type="success" @click="appendWorkbook">{{ text.workbookAppend }}</el-button>
+          <a class="cursor-pointer text-gray-400 text-xs" @click="ipcRenderer.invoke('WORKBOOK_SHOW_BACKUPS')">{{ text.workbookBackups }}</a>
+        </div>
+        <p class="text-gray-400 text-xs m-1.5 leading-normal">{{ text.workbookHint }}</p>
+      </el-form-item>
+      <el-form-item :label="text.googleLabel">
+        <div class="flex flex-col w-full">
+          <div v-if="showCredentialFields" class="flex space-x-2 mb-2">
+            <el-input class="w-64" v-model="google.clientId" @change="saveGoogle" :placeholder="text.googleClientId"></el-input>
+            <el-input class="w-64" v-model="google.clientSecret" @change="saveGoogle" type="password" show-password
+              :placeholder="google.hasClientSecret ? '••••••••••••' : text.googleClientSecret"></el-input>
+          </div>
+          <div class="flex space-x-2 mb-2">
+            <el-input class="w-64" v-model="google.spreadsheetId" @change="saveGoogle" :placeholder="text.googleSpreadsheetId"></el-input>
+            <el-input class="w-64" v-model="google.bannerName" @change="saveGoogle" :placeholder="text.googleBannerName"></el-input>
+          </div>
+          <div class="flex space-x-2 items-center">
+            <el-button :loading="google.connecting" :disabled="!hasCredentials" class="focus:outline-none" plain type="primary" @click="connectGoogle">
+              {{ google.connected ? text.googleReconnect : text.googleConnect }}
+            </el-button>
+            <el-button v-if="google.connected" class="focus:outline-none" plain type="danger" @click="disconnectGoogle">{{ text.googleDisconnect }}</el-button>
+            <el-button :loading="google.loading" :disabled="!google.connected" class="focus:outline-none" plain type="success" @click="exportGoogleSheets">{{ text.googleExport }}</el-button>
+            <span class="text-xs" :class="google.connected ? 'text-green-500' : 'text-gray-400'">
+              {{ google.connected ? text.googleConnected : text.googleNotConnected }}
+            </span>
+            <a v-if="google.spreadsheetId" class="cursor-pointer text-blue-400 text-xs"
+              @click="openLink(`https://docs.google.com/spreadsheets/d/${google.spreadsheetId}/edit`)">{{ text.googleOpen }}</a>
+            <a v-if="hasCredentials" class="cursor-pointer text-gray-400 text-xs"
+              @click="google.showCredentials = !google.showCredentials">{{ text.googleCredentialsToggle }}</a>
+          </div>
+        </div>
+        <p v-if="showCredentialFields" class="text-gray-400 text-xs m-1.5 leading-normal">{{ text.googleHint }}
+          <a class="cursor-pointer text-blue-400" @click="openLink('https://console.cloud.google.com/apis/credentials')">{{ text.googleGuide }}</a>
+        </p>
+        <p v-if="showCredentialFields" class="text-gray-400 text-xs m-1.5 leading-normal">{{ text.googleTokenHint }}</p>
+        <p class="text-gray-400 text-xs m-1.5 leading-normal">{{ text.googleSpreadsheetHint }} {{ text.googleBannerHint }}</p>
+      </el-form-item>
       <el-form-item :label="text.autoUpdate">
         <el-switch
           @change="saveSetting"
@@ -99,6 +140,31 @@ const uigfSupportedVersions = [
   "4.1",
   "3.0"
 ]
+
+const google = reactive({
+  clientId: '',
+  clientSecret: '',
+  spreadsheetId: '',
+  bannerName: '',
+  connected: false,
+  hasClientId: false,
+  hasClientSecret: false,
+  showCredentials: false,
+  connecting: false,
+  loading: false
+})
+
+const hasCredentials = computed(() => google.hasClientId && google.hasClientSecret)
+
+/* Once the OAuth client is stored the panel collapses down to a plain sign-in button;
+   the credential fields are a one-time setup step, not something to look at every day. */
+const showCredentialFields = computed(() => !hasCredentials.value || google.showCredentials)
+
+/* ipcRenderer wraps rejections as "Error invoking remote method 'X': Error: ..." */
+const cleanMessage = (e) => {
+  const message = e && e.message ? e.message : String(e)
+  return message.replace(/^Error invoking remote method '[^']+':\s*(Error:\s*)?/, '')
+}
 
 const text = computed(() => props.i18n.ui.setting)
 const about = computed(() => props.i18n.ui.about)
@@ -161,6 +227,106 @@ const importUIGFJSON = async () => {
   }
 }
 
+const workbook = reactive({ path: '', loading: false })
+
+const pickWorkbook = async () => {
+  workbook.path = await ipcRenderer.invoke('WORKBOOK_PICK')
+}
+
+const appendWorkbook = async () => {
+  workbook.loading = true
+  try {
+    const result = await ipcRenderer.invoke('WORKBOOK_APPEND')
+    ElMessage({
+      message: result.added
+        ? text.value.workbookSuccess.replace('${count}', result.added)
+        : text.value.workbookNothingNew,
+      type: 'success'
+    })
+    const skipped = result.summary.filter(item => item.skipped).map(item => item.title)
+    if (skipped.length) {
+      ElMessage({
+        message: text.value.workbookSkipped.replace('${sheets}', skipped.join(', ')),
+        type: 'warning',
+        duration: 8000
+      })
+    }
+  } catch (e) {
+    ElMessage({ message: cleanMessage(e), type: 'error', duration: 10000 })
+  } finally {
+    workbook.loading = false
+  }
+}
+
+const loadGoogleStatus = async () => {
+  const status = await ipcRenderer.invoke('GOOGLE_SHEETS_STATUS')
+  google.clientId = status.clientId
+  google.spreadsheetId = status.spreadsheetId
+  google.bannerName = status.bannerName
+  google.connected = status.connected
+  google.hasClientId = status.hasClientId
+  google.hasClientSecret = status.hasClientSecret
+}
+
+const saveGoogle = async () => {
+  await ipcRenderer.invoke('GOOGLE_SHEETS_SAVE', {
+    clientId: google.clientId,
+    clientSecret: google.clientSecret,
+    spreadsheetId: google.spreadsheetId,
+    bannerName: google.bannerName
+  })
+  google.clientSecret = ''
+  await loadGoogleStatus()
+}
+
+const connectGoogle = async () => {
+  google.connecting = true
+  try {
+    await saveGoogle()
+    await ipcRenderer.invoke('GOOGLE_SHEETS_CONNECT')
+    await loadGoogleStatus()
+    ElMessage({ message: text.value.googleConnectSuccess, type: 'success' })
+  } catch (e) {
+    ElMessage({ message: cleanMessage(e), type: 'error' })
+  } finally {
+    google.connecting = false
+  }
+}
+
+const disconnectGoogle = async () => {
+  await ipcRenderer.invoke('GOOGLE_SHEETS_DISCONNECT')
+  await loadGoogleStatus()
+}
+
+const exportGoogleSheets = async () => {
+  google.loading = true
+  try {
+    await saveGoogle()
+    const result = await ipcRenderer.invoke('GOOGLE_SHEETS_EXPORT')
+    google.spreadsheetId = result.spreadsheetId
+    const added = result.summary.reduce((sum, item) => sum + item.added, 0)
+    ElMessage({
+      message: added
+        ? text.value.googleExportSuccess.replace('${count}', added)
+        : text.value.googleNothingNew,
+      type: 'success'
+    })
+
+    const skipped = result.summary.filter(item => item.skipped).map(item => item.title)
+    if (skipped.length) {
+      ElMessage({
+        message: text.value.googleSkipped.replace('${sheets}', skipped.join(', ')),
+        type: 'warning',
+        duration: 8000
+      })
+    }
+  } catch (e) {
+    ElMessage({ message: cleanMessage(e), type: 'error' })
+  } finally {
+    google.loading = false
+  }
+}
+
 const gistsConfigDisabled = ref(true)
 
 const configGistsToken = () => {
@@ -195,6 +361,8 @@ onMounted(async () => {
   data.langMap = await ipcRenderer.invoke('LANG_MAP')
   const config = await ipcRenderer.invoke('GET_CONFIG')
   Object.assign(settingForm, config)
+  await loadGoogleStatus()
+  workbook.path = (await ipcRenderer.invoke('WORKBOOK_STATUS')).path
 })
 
 </script>
